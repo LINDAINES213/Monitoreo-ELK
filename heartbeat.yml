@@ -1,0 +1,15 @@
+heartbeat.monitors:
+  - type: http
+    id: api-health-check
+    name: API Health Check
+    schedule: '@every 30s'
+    urls: 
+      - "http://host.docker.internal:8080/api/health/"  # Cambia por tu URL
+    check.response.status: [200, 201]
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "heartbeat-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "kibana:5601"

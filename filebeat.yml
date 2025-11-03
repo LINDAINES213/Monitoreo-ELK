@@ -1,0 +1,19 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/api/api.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    json.overwrite_keys: true
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "api-logs-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "kibana:5601"
+
+setup.ilm.enabled: false
+setup.template.name: "api-logs"
+setup.template.pattern: "api-logs-*"
