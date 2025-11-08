@@ -73,35 +73,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'formularios.middleware.APILoggingMiddleware',
+    "backend.middlewares.logging_middleware.ELKLoggingMiddleware"
 ]
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'custom_json': {
-            '()': 'formularios.middleware.CustomJsonFormatter',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs/api.log'),
-            'maxBytes': 1024 * 1024 * 15,
-            'backupCount': 10,
-            'formatter': 'custom_json',  # ← Usa el formatter personalizado
-        },
-    },
-    'loggers': {
-        'api': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-}
 
 ROOT_URLCONF = "backend.urls"
 
@@ -278,3 +251,66 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEBUG = True
+
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    
+    'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s',
+            'rename_fields': {
+                'asctime': '@timestamp',
+                'levelname': 'log.level',
+                'name': 'logger.name',
+            }
+        },
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    
+    'handlers': {
+        'file_json': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'api.log',
+            'maxBytes': 10485760,  # 10MB
+            'backupCount': 5,
+            'formatter': 'json',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    
+    'loggers': {
+        'api.requests': {
+            'handlers': ['file_json', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['file_json', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'formularios': {
+            'handlers': ['file_json', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    
+    'root': {
+        'handlers': ['file_json', 'console'],
+        'level': 'INFO',
+    },
+}

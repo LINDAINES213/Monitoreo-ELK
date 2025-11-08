@@ -1,19 +1,104 @@
+# ==========================================
+# FILEBEAT CONFIGURATION
+# Recolecta logs de la API Django y los envía a Elasticsearch
+# ==========================================
+
 filebeat.inputs:
+  # Input para logs de la API en formato JSON
   - type: log
     enabled: true
     paths:
       - /var/log/api/api.log
+    
+    # Parsear como JSON porque usamos python-json-logger
     json.keys_under_root: true
     json.add_error_key: true
-    json.overwrite_keys: true
+    json.message_key: message
+    
+    # Campos adicionales
+    fields:
+      service.name: santa-ana-agroforms-api
+      environment: development
+    fields_under_root: true
+    
+    # Procesar multiline logs (para stack traces)
+    multiline.pattern: '^[[:space:]]'
+    multiline.negate: false
+    multiline.match: after
 
+# ==========================================
+# PROCESSORS - Procesamiento de datos
+# ==========================================
+processors:
+  # Agregar metadata del host
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  
+  # Agregar información de Docker
+  - add_docker_metadata: ~
+  
+  # Parsear campos adicionales
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+  
+  # Renombrar campos para compatibilidad ECS
+  - rename:
+      fields:
+        - from: "log_data.http.request.method"
+          to: "http.request.method"
+        - from: "log_data.http.response.status_code"
+          to: "http.response.status_code"
+        - from: "log_data.event.duration"
+          to: "event.duration"
+        - from: "log_data.url.path"
+          to: "url.path"
+        - from: "log_data.service.name"
+          to: "service.name"
+        - from: "log_data.log.level"
+          to: "log.level"
+      ignore_missing: true
+      fail_on_error: false
+
+# ==========================================
+# ELASTICSEARCH OUTPUT
+# ==========================================
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
-  index: "api-logs-%{+yyyy.MM.dd}"
+  index: "santa-ana-api-logs-%{+yyyy.MM.dd}"
+  
+  # Pipeline para procesar datos
+  pipeline: ""
 
+# ==========================================
+# SETUP - Configuración inicial
+# ==========================================
+setup.ilm.enabled: false
+setup.template.name: "santa-ana-api-logs"
+setup.template.pattern: "santa-ana-api-logs-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+
+# ==========================================
+# KIBANA SETUP
+# ==========================================
 setup.kibana:
   host: "kibana:5601"
 
-setup.ilm.enabled: false
-setup.template.name: "api-logs"
-setup.template.pattern: "api-logs-*"
+# ==========================================
+# LOGGING
+# ==========================================
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# ==========================================
+# MONITORING
+# ==========================================
+monitoring.enabled: false
