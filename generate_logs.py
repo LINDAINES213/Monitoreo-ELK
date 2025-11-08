@@ -7,28 +7,29 @@ import random
 import time
 import requests
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configuración
 API_BASE_URL = "http://127.0.0.1:8081/api"
-NUM_REQUESTS = 200  # Cantidad de requests a generar
+NUM_REQUESTS = 200  
 
-# CREDENCIALES - Cambia estos valores con tu usuario real
-NOMBRE_USUARIO = "admin"  # ← Cambia esto
-PASSWORD = "Admin123"  # ← Cambia esto
+NOMBRE_USUARIO = os.getenv("NOMBRE_USUARIO") 
+PASSWORD = os.getenv("PASSWORD")  
 
-# Endpoints disponibles (todos requieren autenticación)
 ENDPOINTS = [
-    {"path": "/formularios/", "method": "GET", "weight": 25},
     {"path": "/formularios-lite/", "method": "GET", "weight": 20},
     {"path": "/categorias/", "method": "GET", "weight": 15},
     {"path": "/dashboard/resumen/", "method": "GET", "weight": 10},
     {"path": "/usuarios/", "method": "GET", "weight": 8},
+    {"path": "/asignaciones/", "method": "GET", "weight": 25},
     {"path": "/campos/", "method": "GET", "weight": 10},
     {"path": "/fuentes-datos/", "method": "GET", "weight": 7},
     {"path": "/grupos/", "method": "GET", "weight": 5},
 ]
 
-# Endpoints que pueden generar errores intencionalmente
 ERROR_ENDPOINTS = [
     "/formularios/999999/",  # 404 - No existe
     "/formularios/abc/",      # 400 - ID inválido
@@ -56,7 +57,6 @@ def login():
         if response.status_code == 200:
             data = response.json()
             
-            # Intentar diferentes nombres de campo para el token
             token = (
                 data.get('access_token') or 
                 data.get('token') or 
@@ -92,7 +92,6 @@ def generate_traffic(token):
     print(f"\n🚀 Iniciando generación de {NUM_REQUESTS} requests...")
     print(f"📊 Esto generará logs estructurados para ELK\n")
     
-    # Headers con el token
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -102,9 +101,8 @@ def generate_traffic(token):
     error_count = 0
     
     for i in range(NUM_REQUESTS):
-        # 80% requests normales, 20% requests con errores
-        if random.random() < 0.8:
-            # Request normal
+        # 90% requests normales, 10% requests con errores
+        if random.random() < 0.9:
             endpoint = random.choices(
                 ENDPOINTS,
                 weights=[e["weight"] for e in ENDPOINTS]
@@ -112,19 +110,16 @@ def generate_traffic(token):
             url = f"{API_BASE_URL}{endpoint['path']}"
             method = endpoint['method']
         else:
-            # Request que generará error
             error_path = random.choice(ERROR_ENDPOINTS)
             url = f"{API_BASE_URL}{error_path}"
             method = "GET"
         
         try:
-            # Hacer request con autenticación
             if method == "GET":
                 response = requests.get(url, headers=headers, timeout=100)
             elif method == "POST":
                 response = requests.post(url, json={}, headers=headers, timeout=100)
             
-            # Contabilizar resultado
             if response.status_code < 400:
                 success_count += 1
                 status_icon = "✅"
@@ -138,7 +133,7 @@ def generate_traffic(token):
                       f"(✅ {success_count} | ⚠️ {error_count})")
             
             # Simular comportamiento humano con delays variables
-            delay = random.uniform(0.1, 0.5)
+            delay = random.uniform(0.5, 1.5)
             time.sleep(delay)
             
         except requests.exceptions.RequestException as e:
