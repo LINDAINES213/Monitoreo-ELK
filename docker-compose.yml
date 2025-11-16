@@ -108,7 +108,7 @@ services:
       - DATABASE_PORT=${DATABASE_PORT:-5432}
       - PGSSLMODE=${PGSSLMODE:-require}
     ports:
-      - "8000:8000"
+      - "8081:8000"
     volumes:
       - ./logs:/app/logs  # Compartir logs con Filebeat
       - ./:/app

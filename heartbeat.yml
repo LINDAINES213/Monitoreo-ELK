@@ -12,69 +12,12 @@ heartbeat.monitors:
     id: api-health-check
     name: "Santa Ana API - Health"
     schedule: '@every 30s'
-    hosts: ["http://api:8000/api/"]
+    hosts: ["http://api:8000/api/health/"]
     check.request:
       method: GET
     check.response:
-      status: [200, 201, 301, 302]
+      status: 200
     timeout: 10s
-    
-  # Monitor 2: Endpoint de Autenticación
-  - type: http
-    id: api-auth-endpoint
-    name: "Santa Ana API - Auth Me"
-    schedule: '@every 60s'
-    hosts: ["http://api:8000/api/auth/me/"]
-    check.request:
-      method: GET
-    check.response:
-      status: [200, 401, 403]  # 401/403 son OK, significa que el endpoint está arriba
-    timeout: 10s
-    
-  # Monitor 3: Endpoint de Formularios
-  - type: http
-    id: api-formularios-endpoint
-    name: "Santa Ana API - Formularios"
-    schedule: '@every 60s'
-    hosts: ["http://api:8000/api/formularios/"]
-    check.request:
-      method: GET
-    check.response:
-      status: [200, 401, 403]  # Puede requerir autenticación
-    timeout: 10s
-    
-  # Monitor 4: Endpoint de Dashboard
-  - type: http
-    id: api-dashboard-endpoint
-    name: "Santa Ana API - Dashboard"
-    schedule: '@every 120s'
-    hosts: ["http://api:8000/api/dashboard/resumen/"]
-    check.request:
-      method: GET
-    check.response:
-      status: [200, 401, 403]
-    timeout: 10s
-    
-  # Monitor 5: Endpoint de Categorías
-  - type: http
-    id: api-categorias-endpoint
-    name: "Santa Ana API - Categorías"
-    schedule: '@every 90s'
-    hosts: ["http://api:8000/api/categorias/"]
-    check.request:
-      method: GET
-    check.response:
-      status: [200, 401, 403]
-    timeout: 10s
-
-# ==========================================
-# PROCESSORS
-# ==========================================
-processors:
-  - add_observer_metadata:
-      geo:
-        name: local-docker
-        location: "0.0, 0.0"
 
 # ==========================================
 # ELASTICSEARCH OUTPUT
@@ -94,17 +37,6 @@ setup.template.settings:
   index.number_of_replicas: 0
 
 # ==========================================
-# KIBANA
-# ==========================================
-setup.kibana:
-  host: "kibana:5601"
-
-# ==========================================
-# DASHBOARDS
-# ==========================================
-setup.dashboards.enabled: false
-
-# ==========================================
 # LOGGING
 # ==========================================
 logging.level: info
@@ -114,8 +46,3 @@ logging.files:
   name: heartbeat
   keepfiles: 7
   permissions: 0644
-
-# ==========================================
-# MONITORING
-# ==========================================
-monitoring.enabled: false

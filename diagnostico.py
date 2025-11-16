@@ -7,7 +7,7 @@ import requests
 import json
 
 # Configuración - EDITA ESTOS VALORES
-API_BASE_URL = "http://127.0.0.1:8081/api"
+API_BASE_URL = "http://localhost:8081/api"
 NOMBRE_USUARIO = "admin"  # ← Cambia esto
 PASSWORD = "Admin123"   # ← Cambia esto
 

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuración
-API_BASE_URL = "http://127.0.0.1:8081/api"
+API_BASE_URL = "http://localhost:8081/api"
 NUM_REQUESTS = 200  
 
 NOMBRE_USUARIO = os.getenv("NOMBRE_USUARIO") 
