@@ -20,10 +20,12 @@ heartbeat.monitors:
     timeout: 10s
 
 # ==========================================
-# ELASTICSEARCH OUTPUT
+# ELASTICSEARCH OUTPUT - ELASTIC CLOUD
 # ==========================================
+cloud.id: ${ELASTIC_CLOUD_ID}
+cloud.auth: elastic:${ELASTIC_PASSWORD}
+
 output.elasticsearch:
-  hosts: ["elasticsearch:9200"]
   index: "santa-ana-heartbeat-%{+yyyy.MM.dd}"
 
 # ==========================================
@@ -46,3 +48,15 @@ logging.files:
   name: heartbeat
   keepfiles: 7
   permissions: 0644
+
+
+
+
+
+
+
+
+
+
+
+

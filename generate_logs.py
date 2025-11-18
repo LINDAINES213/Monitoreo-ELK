@@ -1,6 +1,6 @@
 """
 Script para generar logs abundantes y realistas para el dashboard ELK
-CON AUTENTICACIÓN - Para API que requiere login
+CON AUTENTICACIÓN - Incluye POST y DELETE de categorías
 """
 
 import random
@@ -14,7 +14,7 @@ load_dotenv()
 
 # Configuración
 API_BASE_URL = "http://localhost:8081/api"
-NUM_REQUESTS = 200  
+NUM_REQUESTS = 100  
 
 NOMBRE_USUARIO = os.getenv("NOMBRE_USUARIO") 
 PASSWORD = os.getenv("PASSWORD")  
@@ -35,6 +35,20 @@ ERROR_ENDPOINTS = [
     "/formularios/abc/",      # 400 - ID inválido
     "/usuarios/999/",         # 404
     "/categorias/888/",       # 404
+]
+
+# Nombres para categorías de prueba
+CATEGORIA_NOMBRES = [
+    "Prueba ELK Dashboard",
+    "Categoría Temporal",
+    "Test Monitoreo",
+    "Logs ELK Test",
+    "Dashboard Demo",
+    "Categoría de Prueba",
+    "Monitoreo Temporal",
+    "Test Logging",
+    "ELK Stack Test",
+    "Demo Category",
 ]
 
 
@@ -81,6 +95,115 @@ def login():
         return None
 
 
+def create_categoria(token, nombre):
+    """
+    Crea una categoría y retorna su ID
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    # Ajusta este payload según tu modelo de Categoría
+    payload = {
+        "nombre": nombre,
+        "descripcion": f"Categoría creada para pruebas de logging - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        # Agrega otros campos requeridos por tu modelo aquí
+    }
+    
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/categorias/",
+            json=payload,
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code in [200, 201]:
+            data = response.json()
+            categoria_id = data.get('id') or data.get('pk')
+            print(f"   ✅ Categoría creada: '{nombre}' (ID: {categoria_id})")
+            return categoria_id
+        else:
+            print(f"   ⚠️ Error creando categoría: {response.status_code}")
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"   ❌ Error en POST: {str(e)}")
+        return None
+
+
+def delete_categoria(token, categoria_id):
+    """
+    Elimina una categoría por su ID
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.delete(
+            f"{API_BASE_URL}/categorias/{categoria_id}/",
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code in [200, 204]:
+            print(f"   🗑️ Categoría eliminada (ID: {categoria_id})")
+            return True
+        else:
+            print(f"   ⚠️ Error eliminando categoría: {response.status_code}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"   ❌ Error en DELETE: {str(e)}")
+        return False
+
+
+def generate_crud_logs(token, num_categorias=10):
+    """
+    Genera logs de CRUD (Create y Delete) de categorías
+    """
+    print(f"\n📝 Generando logs de CRUD de categorías...")
+    print(f"   Crearemos y eliminaremos {num_categorias} categorías\n")
+    
+    created_ids = []
+    
+    # Fase 1: Crear categorías
+    print("🆕 FASE 1: Creando categorías...")
+    for i in range(num_categorias):
+        nombre = f"{random.choice(CATEGORIA_NOMBRES)} {i+1}"
+        categoria_id = create_categoria(token, nombre)
+        
+        if categoria_id:
+            created_ids.append(categoria_id)
+        
+        # Delay entre creaciones
+        time.sleep(random.uniform(1, 2))
+    
+    print(f"\n✅ {len(created_ids)} categorías creadas exitosamente")
+    
+    # Pausa entre fases
+    print("\n⏸️ Pausa de 3 segundos antes de eliminar...")
+    time.sleep(3)
+    
+    # Fase 2: Eliminar categorías
+    print("\n🗑️ FASE 2: Eliminando categorías...")
+    deleted_count = 0
+    
+    for categoria_id in created_ids:
+        if delete_categoria(token, categoria_id):
+            deleted_count += 1
+        
+        # Delay entre eliminaciones
+        time.sleep(random.uniform(1, 2))
+    
+    print(f"\n✅ {deleted_count} categorías eliminadas exitosamente")
+    
+    return len(created_ids), deleted_count
+
+
 def generate_traffic(token):
     """
     Genera tráfico realista a la API usando el token de autenticación
@@ -89,8 +212,7 @@ def generate_traffic(token):
         print("❌ No se puede generar tráfico sin token")
         return
     
-    print(f"\n🚀 Iniciando generación de {NUM_REQUESTS} requests...")
-    print(f"📊 Esto generará logs estructurados para ELK\n")
+    print(f"\n🚀 Iniciando generación de {NUM_REQUESTS} requests...\n")
     
     headers = {
         "Authorization": f"Bearer {token}",
@@ -116,16 +238,14 @@ def generate_traffic(token):
         
         try:
             if method == "GET":
-                response = requests.get(url, headers=headers, timeout=100)
+                response = requests.get(url, headers=headers, timeout=10)
             elif method == "POST":
-                response = requests.post(url, json={}, headers=headers, timeout=100)
+                response = requests.post(url, json={}, headers=headers, timeout=10)
             
             if response.status_code < 400:
                 success_count += 1
-                status_icon = "✅"
             else:
                 error_count += 1
-                status_icon = "⚠️"
             
             # Log cada 50 requests
             if (i + 1) % 50 == 0:
@@ -133,13 +253,11 @@ def generate_traffic(token):
                       f"(✅ {success_count} | ⚠️ {error_count})")
             
             # Simular comportamiento humano con delays variables
-            delay = random.uniform(0.5, 1.5)
+            delay = random.uniform(0.3, 1.0)
             time.sleep(delay)
             
         except requests.exceptions.RequestException as e:
             error_count += 1
-            if (i + 1) % 50 == 0:
-                print(f"❌ Error en request {i + 1}: {str(e)}")
     
     # Resumen final
     print("\n" + "="*60)
@@ -148,52 +266,13 @@ def generate_traffic(token):
     print(f"✅ Requests exitosos: {success_count}")
     print(f"⚠️ Requests con errores: {error_count}")
     print(f"📝 Total de logs generados: {NUM_REQUESTS}")
-    print(f"📁 Los logs están en: ./logs/api.log")
-    print("\n🎯 Ahora puedes ver el dashboard en Kibana:")
-    print("   http://localhost:5601")
     print("="*60)
-
-
-def generate_burst_traffic(token):
-    """
-    Genera ráfagas de tráfico para simular picos de uso
-    """
-    if not token:
-        return
-    
-    print("\n🔥 Generando ráfaga de tráfico intenso...")
-    
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-    
-    for burst in range(3):
-        print(f"\n💥 Ráfaga {burst + 1}/3")
-        for i in range(50):
-            endpoint = random.choice(ENDPOINTS)
-            url = f"{API_BASE_URL}{endpoint['path']}"
-            
-            try:
-                requests.get(url, headers=headers, timeout=2)
-                if (i + 1) % 10 == 0:
-                    print(f"  → {i + 1}/50 requests enviados")
-            except:
-                pass
-            
-            # Delay muy corto para simular tráfico intenso
-            time.sleep(0.05)
-        
-        # Pausa entre ráfagas
-        if burst < 2:
-            print("  ⏸️ Pausa de 2 segundos...")
-            time.sleep(2)
 
 
 if __name__ == "__main__":
     print("="*60)
     print("🎯 GENERADOR DE LOGS PARA ELK DASHBOARD")
-    print("   Santa Ana AgroForms API (CON AUTENTICACIÓN)")
+    print("   Santa Ana AgroForms API (CON CRUD)")
     print("="*60)
     print("\nAsegúrate de que:")
     print(f"  1. La API esté corriendo en: {API_BASE_URL}")
@@ -208,17 +287,41 @@ if __name__ == "__main__":
         print("\n💡 Verifica:")
         print("   - Que la API esté corriendo: docker-compose ps")
         print("   - Que el usuario y password sean correctos")
-        print("   - La URL del login: http://127.0.0.1:8081/api/auth/login/")
+        print("   - La URL del login")
         exit(1)
     
-    # Paso 2: Generar tráfico
-    input("\n✅ Token obtenido. Presiona ENTER para comenzar...")
-    generate_traffic(token)
+    print("\n¿Qué operación deseas realizar?")
+    print("1. Solo CRUD de categorías (crear + eliminar)")
+    print("2. Solo tráfico GET normal")
+    print("3. Ambos (CRUD + tráfico GET)")
     
-    # Paso 3 (Opcional): Ráfagas
-    print("\n¿Quieres generar ráfagas adicionales de tráfico? (s/n)")
-    if input().lower() == 's':
-        generate_burst_traffic(token)
+    opcion = input("\nElige una opción (1/2/3): ").strip()
+    
+    if opcion == "1":
+        # Solo CRUD
+        num_cat = input("\n¿Cuántas categorías crear/eliminar? (default: 10): ").strip()
+        num_cat = int(num_cat) if num_cat else 10
+        generate_crud_logs(token, num_cat)
+        
+    elif opcion == "2":
+        # Solo tráfico normal
+        generate_traffic(token)
+        
+    elif opcion == "3":
+        # Primero CRUD
+        print("\n🔄 PARTE 1: CRUD de categorías")
+        num_cat = input("¿Cuántas categorías crear/eliminar? (default: 10): ").strip()
+        num_cat = int(num_cat) if num_cat else 10
+        generate_crud_logs(token, num_cat)
+        
+        # Luego tráfico normal
+        print("\n🔄 PARTE 2: Tráfico normal")
+        input("Presiona ENTER para continuar...")
+        generate_traffic(token)
+    
+    else:
+        print("❌ Opción inválida")
+        exit(1)
     
     print("\n✨ ¡Listo! Revisa Kibana para ver tus logs.")
-    print("🌐 http://localhost:5601")
+    print("🌐 Kibana Cloud: https://tu-endpoint.kb.us-east-1.aws.found.io:9243")

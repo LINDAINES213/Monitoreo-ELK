@@ -1,4 +1,0 @@
-[run]
-omit =
-    */locustfile.py
-    */locustfile_security.py

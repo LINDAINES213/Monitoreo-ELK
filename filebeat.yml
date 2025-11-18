@@ -62,14 +62,13 @@ processors:
       fail_on_error: false
 
 # ==========================================
-# ELASTICSEARCH OUTPUT
+# ELASTICSEARCH OUTPUT - ELASTIC CLOUD
 # ==========================================
+cloud.id: ${ELASTIC_CLOUD_ID}
+cloud.auth: elastic:${ELASTIC_PASSWORD}
+
 output.elasticsearch:
-  hosts: ["elasticsearch:9200"]
   index: "santa-ana-api-logs-%{+yyyy.MM.dd}"
-  
-  # Pipeline para procesar datos
-  pipeline: ""
 
 # ==========================================
 # SETUP - Configuración inicial
@@ -80,12 +79,6 @@ setup.template.pattern: "santa-ana-api-logs-*"
 setup.template.settings:
   index.number_of_shards: 1
   index.number_of_replicas: 0
-
-# ==========================================
-# KIBANA SETUP
-# ==========================================
-setup.kibana:
-  host: "kibana:5601"
 
 # ==========================================
 # LOGGING
@@ -102,3 +95,15 @@ logging.files:
 # MONITORING
 # ==========================================
 monitoring.enabled: false
+
+
+
+
+
+
+
+
+
+
+
+

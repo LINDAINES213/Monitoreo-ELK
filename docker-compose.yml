@@ -1,52 +1,7 @@
 services:
   # ==========================================
-  # ELASTICSEARCH - Motor de búsqueda y almacenamiento
-  # ==========================================
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
-    container_name: elk_elasticsearch
-    environment:
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.security.enabled=false
-      - xpack.security.http.ssl.enabled=false
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    networks:
-      - elk_network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # ==========================================
-  # KIBANA - Dashboard de visualización
-  # ==========================================
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.1
-    container_name: elk_kibana
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-    ports:
-      - "5601:5601"
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - elk_network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # ==========================================
   # FILEBEAT - Recolector de logs
+  # Conectado a ELASTIC CLOUD
   # ==========================================
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.11.1
@@ -57,15 +12,16 @@ services:
       - ./logs:/var/log/api:ro  # Logs de la API
       - filebeat_data:/usr/share/filebeat/data
     command: filebeat -e -strict.perms=false
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+    environment:
+      - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     networks:
       - elk_network
     restart: unless-stopped
 
   # ==========================================
   # HEARTBEAT - Monitor de disponibilidad
+  # Conectado a ELASTIC CLOUD
   # ==========================================
   heartbeat:
     image: docker.elastic.co/beats/heartbeat:8.11.1
@@ -74,9 +30,10 @@ services:
     volumes:
       - ./heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
     command: heartbeat -e -strict.perms=false
+    environment:
+      - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     depends_on:
-      elasticsearch:
-        condition: service_healthy
       api:
         condition: service_started
     networks:
@@ -84,34 +41,20 @@ services:
     restart: unless-stopped
 
   # ==========================================
-  # API DJANGO - Tu aplicación
+  # API DJANGO
   # ==========================================
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: lindain1333/santa-ana-api:latest
     container_name: santa_ana_api
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 2"
-    environment:
-      # Django
-      - DEBUG=True
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
-      
-      # Database en la NUBE (usa tus credenciales del .env)
-      - DATABASE_NAME=${DATABASE_NAME}
-      - DATABASE_USER=${DATABASE_USER}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
-      - DATABASE_HOST=${DATABASE_HOST}
-      - DATABASE_PORT=${DATABASE_PORT:-5432}
-      - PGSSLMODE=${PGSSLMODE:-require}
+    env_file: .env
     ports:
       - "8081:8000"
     volumes:
-      - ./logs:/app/logs  # Compartir logs con Filebeat
-      - ./:/app
+      - ./logs:/app/logs  # Logs compartidos con Filebeat
     networks:
       - elk_network
     restart: unless-stopped
@@ -120,8 +63,6 @@ services:
 # VOLÚMENES
 # ==========================================
 volumes:
-  elasticsearch_data:
-    driver: local
   filebeat_data:
     driver: local
 
