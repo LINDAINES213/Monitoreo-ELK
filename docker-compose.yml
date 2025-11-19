@@ -9,7 +9,7 @@ services:
     user: root
     volumes:
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ./logs:/var/log/api:ro  # Logs de la API
+      - ./logs:/var/log/api:ro
       - filebeat_data:/usr/share/filebeat/data
     command: filebeat -e -strict.perms=false
     environment:
@@ -35,7 +35,7 @@ services:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
     networks:
       - elk_network
     restart: unless-stopped
@@ -54,10 +54,16 @@ services:
     ports:
       - "8081:8000"
     volumes:
-      - ./logs:/app/logs  # Logs compartidos con Filebeat
+      - ./logs:/app/logs
     networks:
       - elk_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
 # ==========================================
 # VOLÚMENES
