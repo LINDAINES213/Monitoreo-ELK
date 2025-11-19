@@ -41,6 +41,25 @@ services:
     restart: unless-stopped
 
   # ==========================================
+  # METRICBEAT - Versión 7.17 (compatible con legacy indices)
+  # ==========================================
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:7.17.26
+    container_name: elk_metricbeat
+    user: root
+    volumes:
+      - ./metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: metricbeat -e -strict.perms=false
+    environment:
+      - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    networks:
+      - elk_network
+    restart: unless-stopped
+
+
+  # ==========================================
   # API DJANGO
   # ==========================================
   api:
@@ -70,6 +89,8 @@ services:
 # ==========================================
 volumes:
   filebeat_data:
+    driver: local
+  metricbeat_data:
     driver: local
 
 # ==========================================

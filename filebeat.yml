@@ -4,24 +4,20 @@
 # ==========================================
 
 filebeat.inputs:
-  # Input para logs de la API en formato JSON
   - type: log
     enabled: true
     paths:
       - /var/log/api/api.log
     
-    # Parsear como JSON porque usamos python-json-logger
     json.keys_under_root: true
     json.add_error_key: true
     json.message_key: message
     
-    # Campos adicionales
     fields:
       service.name: santa-ana-agroforms-api
       environment: development
     fields_under_root: true
     
-    # Procesar multiline logs (para stack traces)
     multiline.pattern: '^[[:space:]]'
     multiline.negate: false
     multiline.match: after
@@ -30,20 +26,16 @@ filebeat.inputs:
 # PROCESSORS - Procesamiento de datos
 # ==========================================
 processors:
-  # Agregar metadata del host
   - add_host_metadata:
       when.not.contains.tags: forwarded
   
-  # Agregar información de Docker
   - add_docker_metadata: ~
   
-  # Parsear campos adicionales
   - decode_json_fields:
       fields: ["message"]
       target: ""
       overwrite_keys: true
   
-  # Renombrar campos para compatibilidad ECS
   - rename:
       fields:
         - from: "log_data.http.request.method"
@@ -62,7 +54,7 @@ processors:
       fail_on_error: false
 
 # ==========================================
-# ELASTICSEARCH OUTPUT - ELASTIC CLOUD
+# ELASTICSEARCH OUTPUT
 # ==========================================
 cloud.id: ${ELASTIC_CLOUD_ID}
 cloud.auth: elastic:${ELASTIC_PASSWORD}

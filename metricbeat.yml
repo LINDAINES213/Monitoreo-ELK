@@ -1,0 +1,79 @@
+# ==========================================
+# METRICBEAT CONFIGURATION
+# ==========================================
+
+metricbeat.modules:
+  - module: system
+    period: 10s
+    metricsets:
+      - cpu
+      - load
+      - memory
+      - network
+      - filesystem
+      - diskio
+      - process
+      - process_summary
+    
+    cpu.metrics: [percentages, normalized_percentages]
+    core.metrics: [percentages]
+    processes: ['.*']
+    
+    process.include_top_n:
+      by_cpu: 5
+      by_memory: 5
+
+  - module: docker
+    period: 10s
+    hosts: ["unix:///var/run/docker.sock"]
+    metricsets:
+      - container
+      - cpu
+      - diskio
+      - healthcheck
+      - info
+      - memory
+      - network
+
+# ==========================================
+# PROCESSORS
+# ==========================================
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+  - add_cloud_metadata: ~
+  - add_fields:
+      target: ''
+      fields:
+        environment: production
+        project: santa-ana-agroforms
+
+# ==========================================
+# ELASTICSEARCH OUTPUT
+# ==========================================
+cloud.id: ${ELASTIC_CLOUD_ID}
+cloud.auth: elastic:${ELASTIC_PASSWORD}
+
+output.elasticsearch:
+  index: "santa-ana-metrics-%{+yyyy.MM.dd}"
+
+# ==========================================
+# SETUP
+# ==========================================
+setup.ilm.enabled: false
+
+setup.template.name: "santa-ana-metrics"
+setup.template.pattern: "santa-ana-metrics-*"
+setup.template.overwrite: true
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+
+# ==========================================
+# LOGGING
+# ==========================================
+logging.level: info
+logging.to_stderr: true

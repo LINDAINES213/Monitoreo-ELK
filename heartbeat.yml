@@ -7,7 +7,7 @@
 # MONITORS - Definición de endpoints a monitorear
 # ==========================================
 heartbeat.monitors:
-  # Monitor 1: Health Check General de la API
+  # Health Check General de la API
   - type: http
     id: api-health-check
     name: "Santa Ana API - Health"
@@ -20,7 +20,7 @@ heartbeat.monitors:
     timeout: 10s
 
 # ==========================================
-# ELASTICSEARCH OUTPUT - ELASTIC CLOUD
+# ELASTICSEARCH OUTPUT
 # ==========================================
 cloud.id: ${ELASTIC_CLOUD_ID}
 cloud.auth: elastic:${ELASTIC_PASSWORD}
